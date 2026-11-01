@@ -304,6 +304,10 @@ Set-up steps:
 4. **Protect `main`**: require PR review and the `ci` and `policy-plan` checks.
 5. Change `POLICY_PATH` in the three policy workflows from `examples/policies`
    to your own folder.
+6. Set the repository **variable** `UCPOLICY_LIVE=true`. Until it is set, the
+   apply and scheduled drift jobs are skipped (so a fork or a fresh clone without
+   a workspace does not fail every night); `policy-plan` skips the plan step when
+   `DATABRICKS_HOST` is not available.
 
 For a first rollout on an existing catalog, run `drift` first, copy what you want
 to keep into the policy, and use `apply --no-revoke` until the plan shows no

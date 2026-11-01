@@ -23,6 +23,9 @@ env:
 
 jobs:
   apply:
+    # Runs only once a workspace is wired up: set the repository variable
+    # UCPOLICY_LIVE=true (Settings -> Secrets and variables -> Actions -> Variables).
+    if: vars.UCPOLICY_LIVE == 'true'
     runs-on: ubuntu-latest
     environment: databricks-prod
     env:
