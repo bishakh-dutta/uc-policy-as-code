@@ -26,12 +26,13 @@ page: no account console or account-level APIs, no SCIM, serverless only, and on
   queries. (Row filters and masks apply to table owners too.)
 - **No service principal with OAuth.** Use a personal access token, with a short
   lifetime, for local runs and for GitHub Actions.
-- **System tables** (for `sql/audit/`) are not listed as available on Free Edition.
-  Try `SELECT * FROM system.access.audit LIMIT 10`. If it fails, test the
-  dashboard on an Azure trial instead.
+- **System tables**: `system.access.audit` was readable on Free Edition in the
+  run below. Events arrive with a delay, so grant changes from a fresh run may
+  not show up for a while.
 
-If anything here is refused on Free Edition (for example `CREATE CATALOG`), the
-Azure Databricks trial ("Trial (Premium - 14-Days Free DBUs)" pricing tier) has
+`CREATE CATALOG`, grants to `account users`, SQL UDFs, row filters and column
+masks all worked on Free Edition in the run below. If something is refused in
+your workspace, the Azure Databricks trial ("Trial (Premium - 14-Days Free DBUs)" pricing tier) has
 the full feature set. It needs a pay-as-you-go Azure subscription, and Azure
 infrastructure may still bill; set a budget alert and delete the resource group
 when done.
@@ -102,6 +103,54 @@ UCPOLICY_LIVE_TEST=1 pytest tests/integration -v
 
 Keep the drift schedule at daily. Free Edition shuts compute down for the day
 if you go over its usage quota.
+
+## Verified run
+
+Run on 2026-11-01 against a Databricks Free Edition workspace (serverless
+2X-Small SQL warehouse), `databricks-sdk` 0.158, Python 3.13.
+
+`ucpolicy drift live/policies` before apply (exit code 2):
+
+```text
+Missing grants (in policy, not in the workspace):
+  + catalog uc_policy_demo                account users  USE_CATALOG
+  + schema uc_policy_demo.sales           account users  USE_SCHEMA
+  + table uc_policy_demo.sales.customers  account users  SELECT
+
+Principals referenced by policy but not found in the workspace:
+  ? uc_policy_admins
+  ? uc_policy_pii_readers
+
+Row filter / column mask drift:
+  ~ create_function  uc_policy_demo.governance.region_filter     (function does not exist)
+  ~ create_function  uc_policy_demo.governance.mask_email        (function does not exist)
+  ~ create_function  uc_policy_demo.governance.mask_card_number  (function does not exist)
+  ~ set_row_filter   uc_policy_demo.sales.customers              (currently unprotected)
+  ~ set_mask         uc_policy_demo.sales.customers.card_number  (currently unprotected)
+  ~ set_mask         uc_policy_demo.sales.customers.email        (currently unprotected)
+```
+
+`ucpolicy apply live/policies --auto-approve` applied 9 changes, after which
+`ucpolicy drift` reported `No drift.` (exit code 0). The two groups are reported
+because they do not exist on Free Edition, which is intended here (see above).
+
+Querying the table afterwards as the catalog owner (4 rows in the table, 2 in
+region `IN`):
+
+```text
+customer_id | name  | email           | card_number         | region
+1           | Asha  | ***@example.com | XXXX-XXXX-XXXX-1111 | IN
+2           | Rohan | ***@example.com | XXXX-XXXX-XXXX-0004 | IN
+```
+
+`UCPOLICY_LIVE_TEST=1 pytest tests/integration -v`:
+
+```text
+tests/integration/test_live.py::test_apply_converges PASSED
+tests/integration/test_live.py::test_row_filter_and_masks_take_effect PASSED
+tests/integration/test_live.py::test_manual_grant_is_detected_and_reverted PASSED
+3 passed in 27.97s
+```
 
 ## 4. Clean up
 

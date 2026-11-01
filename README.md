@@ -348,7 +348,8 @@ and `DatabricksBackend` against a mocked `WorkspaceClient` (pagination,
 - **Live testing is opt-in.** Unit tests mock the `WorkspaceClient`. The
   end-to-end test in `tests/integration/` needs a workspace and credentials, so it
   runs only on demand (`integration` workflow, or `UCPOLICY_LIVE_TEST=1` locally),
-  not on every PR.
+  not on every PR. It was last run successfully against a Databricks Free Edition
+  workspace on 2026-11-01 (results in [`live/README.md`](live/README.md#verified-run)).
 - **Scope is catalogs, schemas and tables.** Volumes, functions, models, external
   locations and storage credentials are not managed yet. Views can be governed as
   tables for grants.
@@ -368,8 +369,9 @@ and `DatabricksBackend` against a mocked `WorkspaceClient` (pagination,
 - **Principal resolution uses workspace-level SCIM.** Account groups that are not
   assigned to the workspace show as `NOT FOUND`.
 - **Audit queries depend on `request_params` keys**, which vary by action. They
-  follow the documented `system.access.audit` schema; check them against a few raw
-  rows in your workspace (see the dashboard guide).
+  follow the documented `system.access.audit` schema; the table is readable on Free
+  Edition, but the grant-change keys have not yet been checked against real rows.
+  Check them against a few raw rows in your workspace (see the dashboard guide).
 - **ABAC policies** (Unity Catalog attribute-based access control with governed
   tags) are not used; this tool attaches filters and masks per table.
 
