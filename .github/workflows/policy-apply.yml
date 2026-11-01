@@ -1,0 +1,46 @@
+# On merge to main: apply the reviewed policy. Gate it with a GitHub
+# environment ("databricks-prod") so that required reviewers must approve.
+name: policy-apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "policies/**"
+      - "examples/policies/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two applies at once.
+concurrency:
+  group: ucpolicy-apply
+  cancel-in-progress: false
+
+env:
+  POLICY_PATH: examples/policies
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: databricks-prod
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: ucpolicy validate "$POLICY_PATH"
+      - name: Apply
+        run: ucpolicy apply "$POLICY_PATH" --auto-approve | tee apply.log
+      - name: Confirm no drift remains
+        run: ucpolicy drift "$POLICY_PATH"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apply-log
+          path: apply.log

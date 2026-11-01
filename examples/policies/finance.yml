@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=../../schema/policy.schema.json
+#
+# Desired access state for the `finance` catalog. This file is the source of
+# truth: grants on the securables below that are not listed here are revoked
+# by `ucpolicy apply` and reported by `ucpolicy drift`.
+
+catalog: finance
+
+grants:
+  - principal: finance_analysts
+    privileges: [USE_CATALOG, SELECT]
+  - principal: finance_engineers
+    privileges: [USE_CATALOG, SELECT, MODIFY]
+  - principal: finance_auditors
+    privileges: [USE_CATALOG]
+
+# Managed outside this repo (e.g. by the platform team); never revoked or reported.
+unmanaged_principals:
+  - platform_admins
+
+schemas:
+  - name: payments
+    grants:
+      - principal: finance_analysts
+        privileges: [USE_SCHEMA]
+      - principal: finance_engineers
+        privileges: [USE_SCHEMA, CREATE_TABLE]
+      - principal: finance_auditors
+        privileges: [USE_SCHEMA]
+    tables:
+      - name: transactions
+        grants:
+          - principal: finance_auditors
+            privileges: [SELECT]
+        # Analysts only see rows for their region; engineers and auditors see all.
+        row_filter:
+          function: governance.region_filter
+          columns: [region]
+        column_masks:
+          - column: card_number
+            function: governance.mask_card_number
+
+  - name: crm
+    grants:
+      - principal: finance_analysts
+        privileges: [USE_SCHEMA]
+      - principal: finance_engineers
+        privileges: [USE_SCHEMA, CREATE_TABLE]
+    tables:
+      - name: customers
+        column_masks:
+          - column: email
+            function: governance.mask_email
+          - column: phone
+            function: governance.mask_phone
+
+  # Holds the row filter and mask functions. Only engineers can see or change it.
+  - name: governance
+    grants:
+      - principal: finance_engineers
+        privileges: [USE_SCHEMA, CREATE_FUNCTION]
+
+functions:
+  - kind: column_mask
+    name: governance.mask_card_number
+    parameter: { name: card_number, type: STRING }
+    exempt_groups: [finance_pii_readers]
+    masked_expression: "concat('XXXX-XXXX-XXXX-', right(card_number, 4))"
+    comment: Last four digits only, unless the caller is in finance_pii_readers.
+
+  - kind: column_mask
+    name: governance.mask_email
+    parameter: { name: email, type: STRING }
+    exempt_groups: [finance_pii_readers]
+    masked_expression: "regexp_replace(email, '^[^@]+', '***')"
+    comment: Hides the local part of the address.
+
+  - kind: column_mask
+    name: governance.mask_phone
+    parameter: { name: phone, type: STRING }
+    exempt_groups: [finance_pii_readers]
+    masked_expression: "NULL"
+
+  - kind: row_filter
+    name: governance.region_filter
+    parameters:
+      - { name: region, type: STRING }
+    exempt_groups: [finance_engineers, finance_auditors]
+    group_rules:
+      - group: finance_analysts_in
+        condition: "region = 'IN'"
+      - group: finance_analysts_eu
+        condition: "region IN ('DE', 'FR', 'NL')"
+    comment: Regional analysts see their own region's rows.

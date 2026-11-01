@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../schema/policy.schema.json
+catalog: hr
+
+grants:
+  - principal: hr_partners
+    privileges: [USE_CATALOG]
+
+schemas:
+  - name: core
+    grants:
+      - principal: hr_partners
+        privileges: [USE_SCHEMA]
+    tables:
+      - name: employees
+        grants:
+          - principal: hr_partners
+            privileges: [SELECT]
+        column_masks:
+          - column: salary
+            function: core.mask_salary
+
+functions:
+  - kind: column_mask
+    name: core.mask_salary
+    parameter: { name: salary, type: "DECIMAL(12,2)" }
+    exempt_groups: [hr_compensation]
+    masked_expression: "CAST(NULL AS DECIMAL(12,2))"

@@ -1,0 +1,40 @@
+# Scheduled drift detection. Fails (exit code 2) when live grants, row filters
+# or masks differ from the policy, e.g. after a manual GRANT in the UI.
+name: drift
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # daily, 03:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  POLICY_PATH: examples/policies
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Detect drift
+        run: |
+          set +e
+          ucpolicy drift "$POLICY_PATH" --resolve-principals --out drift.txt --json-out drift.json
+          code=$?
+          { echo '```'; cat drift.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: |
+            drift.txt
+            drift.json

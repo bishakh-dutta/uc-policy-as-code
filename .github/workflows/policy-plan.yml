@@ -1,0 +1,64 @@
+# On every pull request that touches policies: validate, plan against the live
+# workspace, and post the plan as a sticky PR comment for review.
+name: policy-plan
+
+on:
+  pull_request:
+    paths:
+      - "policies/**"
+      - "examples/policies/**"
+      - ".github/workflows/policy-*.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  POLICY_PATH: examples/policies # point this at your own policy folder
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      # Either OAuth M2M (service principal, recommended) ...
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      # ... or a personal access token. Unset secrets are ignored by the SDK.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Validate policy files
+        run: ucpolicy validate "$POLICY_PATH"
+
+      - name: Plan
+        id: plan
+        if: env.DATABRICKS_HOST != ''
+        run: ucpolicy plan "$POLICY_PATH" --format markdown --out plan.md
+
+      - name: Note missing credentials
+        if: env.DATABRICKS_HOST == ''
+        run: |
+          echo "::notice::DATABRICKS_HOST is not set (e.g. a fork PR); validation ran, plan skipped."
+
+      - name: Post plan as PR comment
+        if: steps.plan.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('plan.md', 'utf8');
+            const marker = '<!-- ucpolicy-plan -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+            await core.summary.addRaw(body).write();

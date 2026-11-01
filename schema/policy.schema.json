@@ -1,0 +1,358 @@
+{
+  "$defs": {
+    "ColumnMaskBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Column",
+          "type": "string"
+        },
+        "function": {
+          "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Function",
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "function"
+      ],
+      "title": "ColumnMaskBinding",
+      "type": "object"
+    },
+    "Grant": {
+      "additionalProperties": false,
+      "properties": {
+        "principal": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Principal",
+          "type": "string"
+        },
+        "privileges": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Privileges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "principal",
+        "privileges"
+      ],
+      "title": "Grant",
+      "type": "object"
+    },
+    "GroupRule": {
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Group",
+          "type": "string"
+        },
+        "condition": {
+          "minLength": 1,
+          "title": "Condition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group",
+        "condition"
+      ],
+      "title": "GroupRule",
+      "type": "object"
+    },
+    "MaskFunction": {
+      "additionalProperties": false,
+      "description": "A column mask: members of ``exempt_groups`` see the raw value.",
+      "properties": {
+        "kind": {
+          "const": "column_mask",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "parameter": {
+          "$ref": "#/$defs/Parameter"
+        },
+        "exempt_groups": {
+          "items": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Exempt Groups",
+          "type": "array"
+        },
+        "masked_expression": {
+          "minLength": 1,
+          "title": "Masked Expression",
+          "type": "string"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "parameter",
+        "exempt_groups",
+        "masked_expression"
+      ],
+      "title": "MaskFunction",
+      "type": "object"
+    },
+    "Parameter": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "pattern": "^[A-Za-z][A-Za-z0-9_(), <>:]*$",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "Parameter",
+      "type": "object"
+    },
+    "RowFilterBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "function": {
+          "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Function",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Columns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "function",
+        "columns"
+      ],
+      "title": "RowFilterBinding",
+      "type": "object"
+    },
+    "RowFilterFunction": {
+      "additionalProperties": false,
+      "description": "A row filter: exempt groups see every row, other groups see rows matching their rule.",
+      "properties": {
+        "kind": {
+          "const": "row_filter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          },
+          "minItems": 1,
+          "title": "Parameters",
+          "type": "array"
+        },
+        "exempt_groups": {
+          "items": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Exempt Groups",
+          "type": "array"
+        },
+        "group_rules": {
+          "items": {
+            "$ref": "#/$defs/GroupRule"
+          },
+          "title": "Group Rules",
+          "type": "array"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "parameters"
+      ],
+      "title": "RowFilterFunction",
+      "type": "object"
+    },
+    "Schema": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/Grant"
+          },
+          "title": "Grants",
+          "type": "array"
+        },
+        "tables": {
+          "items": {
+            "$ref": "#/$defs/Table"
+          },
+          "title": "Tables",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Schema",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/Grant"
+          },
+          "title": "Grants",
+          "type": "array"
+        },
+        "row_filter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RowFilterBinding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "column_masks": {
+          "items": {
+            "$ref": "#/$defs/ColumnMaskBinding"
+          },
+          "title": "Column Masks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Table",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "catalog": {
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "title": "Catalog",
+      "type": "string"
+    },
+    "grants": {
+      "items": {
+        "$ref": "#/$defs/Grant"
+      },
+      "title": "Grants",
+      "type": "array"
+    },
+    "schemas": {
+      "items": {
+        "$ref": "#/$defs/Schema"
+      },
+      "title": "Schemas",
+      "type": "array"
+    },
+    "functions": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "column_mask": "#/$defs/MaskFunction",
+            "row_filter": "#/$defs/RowFilterFunction"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/MaskFunction"
+          },
+          {
+            "$ref": "#/$defs/RowFilterFunction"
+          }
+        ]
+      },
+      "title": "Functions",
+      "type": "array"
+    },
+    "unmanaged_principals": {
+      "items": {
+        "maxLength": 255,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Unmanaged Principals",
+      "type": "array"
+    }
+  },
+  "required": [
+    "catalog"
+  ],
+  "title": "CatalogPolicy",
+  "type": "object"
+}

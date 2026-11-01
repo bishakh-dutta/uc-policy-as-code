@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uc-policy-as-code"
+version = "0.1.0"
+description = "Unity Catalog access governance as code: YAML-declared grants, row filters and column masks, plan/apply and drift detection via the Databricks SDK."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Bishakh Dutta" }]
+requires-python = ">=3.11"
+dependencies = [
+    "databricks-sdk>=0.158",  # developed and tested against 0.158
+    "pydantic>=2.6",
+    "PyYAML>=6.0",
+]
+keywords = ["databricks", "unity-catalog", "governance", "policy-as-code", "data-governance"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Database",
+    "Topic :: Security",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
+
+[project.scripts]
+ucpolicy = "uc_policy.cli:main"
+
+[project.urls]
+Repository = "https://github.com/bishakh-dutta/uc-policy-as-code"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uc_policy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "PTH", "C4", "RET"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["uc_policy"]
+mypy_path = "src"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["databricks.*"]
+ignore_missing_imports = true

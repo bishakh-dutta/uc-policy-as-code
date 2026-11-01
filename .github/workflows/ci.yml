@@ -1,0 +1,34 @@
+# Code quality for the tool itself. Needs no secrets and never touches a workspace.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+      - name: Validate example policies
+        run: ucpolicy validate examples/policies
+      - name: Plan and drift against the offline snapshot
+        run: |
+          ucpolicy plan examples/policies --state-file examples/live_state.json
+          ucpolicy drift examples/policies --state-file examples/live_state.json || test $? -eq 2

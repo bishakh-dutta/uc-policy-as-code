@@ -1,0 +1,115 @@
+{
+  "grants": {
+    "CATALOG/finance": {
+      "finance_analysts": [
+        "SELECT",
+        "USE_CATALOG"
+      ],
+      "finance_engineers": [
+        "SELECT",
+        "USE_CATALOG"
+      ],
+      "finance_auditors": [
+        "USE_CATALOG"
+      ],
+      "platform_admins": [
+        "ALL_PRIVILEGES"
+      ]
+    },
+    "SCHEMA/finance.payments": {
+      "finance_analysts": [
+        "USE_SCHEMA"
+      ],
+      "finance_engineers": [
+        "CREATE_TABLE",
+        "USE_SCHEMA"
+      ],
+      "finance_auditors": [
+        "USE_SCHEMA"
+      ]
+    },
+    "TABLE/finance.payments.transactions": {
+      "finance_auditors": [
+        "SELECT"
+      ],
+      "contractors_tmp": [
+        "SELECT"
+      ]
+    },
+    "SCHEMA/finance.crm": {
+      "finance_analysts": [
+        "USE_SCHEMA"
+      ],
+      "finance_engineers": [
+        "CREATE_TABLE",
+        "USE_SCHEMA"
+      ],
+      "former_finance_lead@example.com": [
+        "USE_SCHEMA"
+      ]
+    },
+    "TABLE/finance.crm.customers": {},
+    "SCHEMA/finance.governance": {
+      "finance_engineers": [
+        "CREATE_FUNCTION",
+        "USE_SCHEMA"
+      ]
+    },
+    "CATALOG/hr": {
+      "hr_partners": [
+        "USE_CATALOG"
+      ]
+    },
+    "SCHEMA/hr.core": {
+      "hr_partners": [
+        "USE_SCHEMA"
+      ]
+    },
+    "TABLE/hr.core.employees": {
+      "hr_partners": [
+        "SELECT"
+      ]
+    }
+  },
+  "tables": {
+    "finance.payments.transactions": {
+      "row_filter": {
+        "function": "finance.governance.region_filter",
+        "columns": [
+          "region"
+        ]
+      },
+      "column_masks": {
+        "card_number": "finance.governance.mask_card_number"
+      }
+    },
+    "finance.crm.customers": {
+      "row_filter": null,
+      "column_masks": {
+        "email": "finance.governance.mask_email"
+      }
+    },
+    "hr.core.employees": {
+      "row_filter": null,
+      "column_masks": {}
+    }
+  },
+  "functions": {
+    "finance.governance.mask_card_number": "CASE WHEN is_account_group_member('finance_pii_readers') THEN card_number ELSE concat('XXXX-XXXX-XXXX-', right(card_number, 4)) END",
+    "finance.governance.mask_email": "CASE WHEN is_account_group_member('finance_pii_readers') THEN email ELSE regexp_replace(email, '^[^@]+', '***') END",
+    "finance.governance.mask_phone": "CASE WHEN is_account_group_member('finance_pii_readers') THEN phone ELSE NULL END",
+    "finance.governance.region_filter": "is_account_group_member('finance_engineers') OR is_account_group_member('finance_auditors') OR (is_account_group_member('finance_analysts_in') AND (region = 'IN')) OR (is_account_group_member('finance_analysts_eu') AND (region IN ('DE', 'FR', 'NL')))"
+  },
+  "principals": [
+    "finance_analysts",
+    "finance_analysts_eu",
+    "finance_analysts_in",
+    "finance_auditors",
+    "finance_engineers",
+    "finance_pii_readers",
+    "former_finance_lead@example.com",
+    "hr_compensation",
+    "hr_partners",
+    "platform_admins"
+  ]
+}
