@@ -26,8 +26,8 @@ jobs:
       - run: ruff format --check .
       - run: mypy
       - run: pytest
-      - name: Validate example policies
-        run: ucpolicy validate examples/policies
+      - name: Validate example and live policies
+        run: ucpolicy validate examples/policies && ucpolicy validate live/policies
       - name: Plan and drift against the offline snapshot
         run: |
           ucpolicy plan examples/policies --state-file examples/live_state.json

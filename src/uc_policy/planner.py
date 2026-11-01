@@ -137,6 +137,13 @@ def _plan_security(policy: CatalogPolicy, backend: Backend) -> Plan:
         name = policy.qualify(fn.name)
         live_body = backend.get_function_definition(name)
         if live_body is None:
+            schema = name.rsplit(".", 1)[0]
+            if backend.get_grants(SecurableType.SCHEMA, schema) is None:
+                plan.warnings.append(
+                    f"schema {schema} does not exist; function {name} skipped "
+                    "(create the schema first)"
+                )
+                continue
             plan.sql_changes.append(
                 SqlChange(
                     SqlAction.CREATE_FUNCTION,

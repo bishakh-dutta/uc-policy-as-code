@@ -22,6 +22,8 @@ def function_body(fn: MaskFunction | RowFilterFunction) -> str:
         return f"CASE WHEN {exempt} THEN {fn.parameter.name} ELSE {fn.masked_expression} END"
     clauses = [_is_member(g) for g in fn.exempt_groups]
     clauses += [f"({_is_member(r.group)} AND ({r.condition}))" for r in fn.group_rules]
+    if fn.default_condition:
+        clauses.append(f"({fn.default_condition})")
     return " OR ".join(clauses)
 
 

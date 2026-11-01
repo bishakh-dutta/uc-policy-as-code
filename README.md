@@ -186,6 +186,12 @@ ucpolicy plan  examples/policies --state-file examples/live_state.json
 ucpolicy drift examples/policies --state-file examples/live_state.json --resolve-principals
 ```
 
+To run against a **real workspace for free** (Databricks Free Edition), follow
+[`live/README.md`](live/README.md): a setup script creates a sandbox catalog,
+`live/policies/` governs it, and an opt-in integration test applies the policy,
+checks that the row filter and masks really take effect, injects a manual grant
+and confirms drift detection catches and reverts it.
+
 Against a real workspace, authenticate the way any Databricks SDK tool does
 (environment variables or a `~/.databrickscfg` profile):
 
@@ -277,13 +283,14 @@ Plan: 1 privilege(s) to grant, 2 to revoke, 3 row filter/mask statement(s).
 
 ## CI/CD setup
 
-Four workflows in [`.github/workflows`](.github/workflows):
+Five workflows in [`.github/workflows`](.github/workflows):
 
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yml` | every PR and push | ruff, ruff format, mypy (strict), pytest on Python 3.11 to 3.13, plan/drift against the offline snapshot. No secrets. |
 | `policy-plan.yml` | PR touching policy files | `validate`, then `plan --format markdown`, posted as a single PR comment that is updated on each push |
 | `policy-apply.yml` | merge to `main` touching policy files, or manual | `apply --auto-approve` in the `databricks-prod` environment, then `drift` to confirm convergence. Runs are serialised with a concurrency group |
+| `integration.yml` | manual | End-to-end test against the sandbox catalog (see [`live/README.md`](live/README.md)) |
 | `drift.yml` | daily 03:30 UTC, or manual | `drift --resolve-principals`; the report goes to the job summary and an artifact; the job fails on drift |
 
 Set-up steps:
@@ -302,8 +309,8 @@ Set-up steps:
    secrets on the environment instead of the repository to limit which jobs can
    read them.
 4. **Protect `main`**: require PR review and the `ci` and `policy-plan` checks.
-5. Change `POLICY_PATH` in the three policy workflows from `examples/policies`
-   to your own folder.
+5. The policy workflows use `POLICY_PATH: live/policies` (the sandbox policy from
+   [`live/README.md`](live/README.md)); change it to your own folder.
 6. Set the repository **variable** `UCPOLICY_LIVE=true`. Until it is set, the
    apply and scheduled drift jobs are skipped (so a fork or a fresh clone without
    a workspace does not fail every night); `policy-plan` skips the plan step when
@@ -338,9 +345,10 @@ and `DatabricksBackend` against a mocked `WorkspaceClient` (pagination,
 
 ## Limitations
 
-- **Tested with mocks, not yet against a live workspace in CI.** The SDK calls are
-  covered by unit tests with a mocked `WorkspaceClient`; the repository does not
-  run an integration test against a real metastore.
+- **Live testing is opt-in.** Unit tests mock the `WorkspaceClient`. The
+  end-to-end test in `tests/integration/` needs a workspace and credentials, so it
+  runs only on demand (`integration` workflow, or `UCPOLICY_LIVE_TEST=1` locally),
+  not on every PR.
 - **Scope is catalogs, schemas and tables.** Volumes, functions, models, external
   locations and storage credentials are not managed yet. Views can be governed as
   tables for grants.

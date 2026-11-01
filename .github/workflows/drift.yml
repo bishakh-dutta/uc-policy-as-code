@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  POLICY_PATH: examples/policies
+  POLICY_PATH: live/policies # sandbox policy (live/README.md); point at your own folder
 
 jobs:
   drift:

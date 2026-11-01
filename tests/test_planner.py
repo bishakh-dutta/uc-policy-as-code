@@ -80,6 +80,15 @@ def test_missing_securable_is_skipped_with_warning(write_policy: WritePolicy) ->
     ]
 
 
+def test_functions_skipped_when_schema_missing(finance_policy: CatalogPolicy) -> None:
+    state = empty_state_for(finance_policy)
+    del state["grants"]["SCHEMA/finance.governance"]
+    plan = build_plan([finance_policy], InMemoryBackend(state))
+
+    assert not [c for c in plan.sql_changes if c.action is SqlAction.CREATE_FUNCTION]
+    assert any("schema finance.governance does not exist" in w for w in plan.warnings)
+
+
 def test_grant_change_sql() -> None:
     change = GrantChange(
         SecurableType.TABLE,

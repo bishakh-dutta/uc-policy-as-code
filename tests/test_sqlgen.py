@@ -43,6 +43,17 @@ def test_row_filter_function_sql(finance_policy: CatalogPolicy) -> None:
     )
 
 
+def test_row_filter_default_condition() -> None:
+    fn = RowFilterFunction(
+        kind="row_filter",
+        name="gov.f",
+        parameters=[{"name": "region", "type": "STRING"}],  # type: ignore[list-item]
+        exempt_groups=["admins"],
+        default_condition="region = 'IN'",
+    )
+    assert function_body(fn) == "is_account_group_member('admins') OR (region = 'IN')"
+
+
 def test_binding_statements() -> None:
     assert set_row_filter_sql("finance.payments.transactions", "finance.gov.f", ["region"]) == (
         "ALTER TABLE `finance`.`payments`.`transactions` "

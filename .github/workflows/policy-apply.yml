@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths:
       - "policies/**"
-      - "examples/policies/**"
+      - "live/policies/**"
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  POLICY_PATH: examples/policies
+  POLICY_PATH: live/policies # sandbox policy (live/README.md); point at your own folder
 
 jobs:
   apply:

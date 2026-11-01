@@ -137,21 +137,23 @@ class MaskFunction(_Strict):
 
 
 class RowFilterFunction(_Strict):
-    """A row filter: exempt groups see every row, other groups see rows matching their rule."""
+    """A row filter: exempt groups see every row, other groups see rows matching their
+    rule, and everyone else sees rows matching ``default_condition`` (none if unset)."""
 
     kind: Literal["row_filter"]
     name: FunctionRef
     parameters: list[Parameter] = Field(min_length=1)
     exempt_groups: list[Principal] = Field(default_factory=list)
     group_rules: list[GroupRule] = Field(default_factory=list)
+    default_condition: str | None = Field(default=None, min_length=1)
     comment: str | None = None
 
     @model_validator(mode="after")
     def _has_rule(self) -> RowFilterFunction:
-        if not self.exempt_groups and not self.group_rules:
+        if not (self.exempt_groups or self.group_rules or self.default_condition):
             raise ValueError(
-                f"row filter {self.name!r} needs exempt_groups or group_rules, "
-                "otherwise it hides every row"
+                f"row filter {self.name!r} needs exempt_groups, group_rules or "
+                "default_condition, otherwise it hides every row"
             )
         return self
 

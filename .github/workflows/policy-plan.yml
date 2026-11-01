@@ -6,7 +6,7 @@ on:
   pull_request:
     paths:
       - "policies/**"
-      - "examples/policies/**"
+      - "live/policies/**"
       - ".github/workflows/policy-*.yml"
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
   pull-requests: write
 
 env:
-  POLICY_PATH: examples/policies # point this at your own policy folder
+  POLICY_PATH: live/policies # sandbox policy (live/README.md); point at your own folder
 
 jobs:
   plan:

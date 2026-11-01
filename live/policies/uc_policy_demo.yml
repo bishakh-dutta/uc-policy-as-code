@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../../schema/policy.schema.json
+#
+# Policy for a live test against a real workspace (see live/README.md).
+# It works on Databricks Free Edition, where you cannot create account groups:
+# grants go to the built-in `account users` group, and the groups named in the
+# filter and mask (uc_policy_admins, uc_policy_pii_readers) do not need to exist.
+# If they don't, nobody is exempt, which is exactly what makes the effect visible.
+
+catalog: uc_policy_demo
+
+grants:
+  - principal: account users
+    privileges: [USE_CATALOG]
+
+schemas:
+  - name: sales
+    grants:
+      - principal: account users
+        privileges: [USE_SCHEMA]
+    tables:
+      - name: customers
+        grants:
+          - principal: account users
+            privileges: [SELECT]
+        row_filter:
+          function: governance.region_filter
+          columns: [region]
+        column_masks:
+          - column: email
+            function: governance.mask_email
+          - column: card_number
+            function: governance.mask_card_number
+
+  # Only the catalog owner can use the functions schema.
+  - name: governance
+
+functions:
+  - kind: row_filter
+    name: governance.region_filter
+    parameters:
+      - { name: region, type: STRING }
+    exempt_groups: [uc_policy_admins]
+    default_condition: "region = 'IN'"
+    comment: Members of uc_policy_admins see all rows; everyone else sees region IN.
+
+  - kind: column_mask
+    name: governance.mask_email
+    parameter: { name: email, type: STRING }
+    exempt_groups: [uc_policy_pii_readers]
+    masked_expression: "regexp_replace(email, '^[^@]+', '***')"
+
+  - kind: column_mask
+    name: governance.mask_card_number
+    parameter: { name: card_number, type: STRING }
+    exempt_groups: [uc_policy_pii_readers]
+    masked_expression: "concat('XXXX-XXXX-XXXX-', right(card_number, 4))"

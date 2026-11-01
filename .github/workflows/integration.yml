@@ -1,0 +1,35 @@
+# End-to-end test against a real workspace (e.g. Databricks Free Edition).
+# Manual only, and only once the repository variable UCPOLICY_LIVE is "true".
+name: integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ucpolicy-apply # shares the lock with policy-apply: both write grants
+  cancel-in-progress: false
+
+jobs:
+  live:
+    if: vars.UCPOLICY_LIVE == 'true'
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_WAREHOUSE_ID: ${{ secrets.DATABRICKS_WAREHOUSE_ID }}
+      UCPOLICY_LIVE_TEST: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/integration -v
+      - name: Drift report after the test
+        run: ucpolicy drift live/policies
